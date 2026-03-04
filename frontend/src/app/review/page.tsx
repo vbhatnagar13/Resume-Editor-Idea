@@ -1,7 +1,8 @@
 'use client';
 
+import DOMPurify from 'dompurify';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { DiffViewer } from '@/components/DiffViewer';
 import { DownloadButtons } from '@/components/DownloadButtons';
 import type { TailorResponse } from '@/lib/types';
@@ -62,6 +63,14 @@ function ReviewContent() {
 
   const { diff_report, preview_html } = result;
   const totalChanges = diff_report.changes.length;
+
+  const safePreviewHtml = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    return DOMPurify.sanitize(preview_html, {
+      ALLOWED_TAGS: ['div', 'h1', 'h2', 'h3', 'p', 'ul', 'li', 'hr', 'strong', 'em', 'span', 'br'],
+      ALLOWED_ATTR: ['class'],
+    });
+  }, [preview_html]);
 
   return (
     <div className="space-y-6">
@@ -129,7 +138,7 @@ function ReviewContent() {
             .resume-preview hr { border: none; border-top: 1px solid #e5e7eb; }
           `}</style>
           <div
-            dangerouslySetInnerHTML={{ __html: preview_html }}
+            dangerouslySetInnerHTML={{ __html: safePreviewHtml }}
           />
         </div>
       )}
