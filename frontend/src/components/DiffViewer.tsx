@@ -131,9 +131,9 @@ export function DiffViewer({ diffReport }: DiffViewerProps) {
         <div>
           <p className="text-sm font-semibold text-gray-700 mb-2">Keywords Added</p>
           <div className="flex flex-wrap gap-2">
-            {keywords_added.map(kw => (
+            {keywords_added.map((kw, i) => (
               <span
-                key={kw}
+                key={`${kw}-${i}`}
                 className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"
               >
                 + {kw}

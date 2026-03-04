@@ -66,6 +66,9 @@ function ReviewContent() {
 
   const safePreviewHtml = useMemo(() => {
     if (typeof window === 'undefined') return '';
+    // Defense in depth: the backend already escapes HTML entities via _escape() in
+    // generator._build_preview_html, so preview_html should contain no raw tags from
+    // resume content. DOMPurify provides a second layer against any unexpected markup.
     return DOMPurify.sanitize(preview_html, {
       ALLOWED_TAGS: ['div', 'h1', 'h2', 'h3', 'p', 'ul', 'li', 'hr', 'strong', 'em', 'span', 'br'],
       ALLOWED_ATTR: ['class'],

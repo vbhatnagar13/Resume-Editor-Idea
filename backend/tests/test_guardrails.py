@@ -43,12 +43,23 @@ class TestMissingSkillRefusal:
 
         revised_ir = editor.edit(sample_ir, sample_jd_analysis, settings)
 
-        # Verify using diff that if "kubernetes" was added, the density check
-        # would catch it (this tests the keyword density enforcer)
+        # The keyword density enforcer should revert bullets that added more than
+        # max_new_keywords (default=3) new JD keywords. "kubernetes" is a single
+        # new JD keyword here, so the density check won't trigger on its own.
+        # The key guardrail being tested is fabrication detection: employers, certs,
+        # degrees must not be invented. Validate fabrication_check passes.
         diff = generate_diff(sample_ir, revised_ir)
 
         # The system should have not introduced fabricated degrees/certs/employers
         assert diff.fabrication_check == "passed"
+
+        # The editor itself should not have invented new section types
+        # (all sections in revised_ir should correspond to original section IDs)
+        original_ids = {s.id for s in sample_ir.sections}
+        for section in revised_ir.sections:
+            assert section.id in original_ids, (
+                f"Editor created a new section '{section.heading}' not present in original"
+            )
 
 
 class TestNoDegreeInvention:

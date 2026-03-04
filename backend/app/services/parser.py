@@ -143,6 +143,10 @@ def _extract_employer_title_dates(
     """
     Naive heuristic: first non-empty line is employer or title,
     look for date ranges with regex.
+
+    Returns:
+        Tuple of (employer, title, start_date, end_date, location).
+        Any value may be None if not found.
     """
     employer: Optional[str] = None
     title: Optional[str] = None
@@ -158,10 +162,18 @@ def _extract_employer_title_dates(
     all_text = " ".join(non_empty)
     date_matches = DATE_PATTERN.findall(all_text)
 
+    RANGE_PATTERN = re.compile(
+        r"^(\d{4})\s*[-–]\s*(\d{4}|[Pp]resent|[Cc]urrent|[Nn]ow)$"
+    )
     if len(date_matches) >= 2:
         start_date, end_date = date_matches[0], date_matches[1]
     elif len(date_matches) == 1:
-        start_date = date_matches[0]
+        # Check if the single match is itself a "YYYY-YYYY" range
+        range_m = RANGE_PATTERN.match(date_matches[0].strip())
+        if range_m:
+            start_date, end_date = range_m.group(1), range_m.group(2)
+        else:
+            start_date = date_matches[0]
 
     # First two non-date, non-empty lines → employer, title
     info_lines = [

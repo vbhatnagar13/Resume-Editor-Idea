@@ -196,3 +196,25 @@ class TestPreserveBulletFormatting:
         ]
         bold_runs = [r for r in all_runs if r.bold]
         assert len(bold_runs) >= 1
+
+
+class TestDateRangeParsing:
+    def test_year_range_splits_into_start_end(self):
+        """A 'YYYY-YYYY' pattern in a single match should yield separate start/end dates."""
+        from app.services.parser import _extract_employer_title_dates
+
+        lines = ["Acme Corp", "Software Engineer", "2020 - 2023"]
+        employer, title, start_date, end_date, location = _extract_employer_title_dates(lines)
+
+        assert start_date == "2020"
+        assert end_date == "2023"
+
+    def test_present_range_splits_correctly(self):
+        """A 'YYYY-Present' pattern should yield start_date and end_date='Present'."""
+        from app.services.parser import _extract_employer_title_dates
+
+        lines = ["Beta LLC", "Staff Engineer", "2021 – Present"]
+        employer, title, start_date, end_date, location = _extract_employer_title_dates(lines)
+
+        assert start_date == "2021"
+        assert end_date.lower() == "present"
