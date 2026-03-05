@@ -2,10 +2,30 @@
 
 from __future__ import annotations
 
+import re
 from typing import List, Set
 
 from app.models.ir import BulletItem, ResumeIR
 from app.models.schemas import DiffChange, DiffReport
+
+
+def compute_keyword_coverage(ir: ResumeIR, jd_keywords: List[str]) -> float:
+    """Return fraction of JD keywords present anywhere in the resume (0.0–1.0)."""
+    if not jd_keywords:
+        return 1.0
+    all_text = ""
+    for section in ir.sections:
+        for entry in section.entries:
+            for bullet in entry.bullets:
+                all_text += " " + bullet.text
+            if entry.title:
+                all_text += " " + entry.title
+        for item in section.plain_items:
+            all_text += " " + item.text
+    tokens = set(re.findall(r"\b[a-zA-Z0-9#+.-]{2,}\b", all_text.lower()))
+    kw_tokens = {k.lower() for k in jd_keywords}
+    matched = tokens & kw_tokens
+    return round(len(matched) / len(kw_tokens), 4) if kw_tokens else 1.0
 
 
 def generate_diff(original: ResumeIR, revised: ResumeIR) -> DiffReport:

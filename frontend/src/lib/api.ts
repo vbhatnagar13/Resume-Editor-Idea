@@ -14,10 +14,15 @@ const API_BASE =
 export async function uploadResume(
   file: File,
   jobDescription: string,
+  jdFile?: File,
 ): Promise<UploadResponse> {
   const form = new FormData();
   form.append('file', file);
-  form.append('job_description', jobDescription);
+  if (jdFile) {
+    form.append('jd_file', jdFile);
+  } else {
+    form.append('job_description', jobDescription);
+  }
 
   const res = await fetch(`${API_BASE}/api/upload`, {
     method: 'POST',

@@ -40,6 +40,8 @@ export interface TailorResponse {
   session_id: string;
   diff_report: DiffReport;
   preview_html: string;
+  keyword_score_before: number;  // 0–1 fraction
+  keyword_score_after: number;   // 0–1 fraction
 }
 
 export type DownloadFormat = 'docx' | 'pdf';

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { DiffViewer } from '@/components/DiffViewer';
 import { DownloadButtons } from '@/components/DownloadButtons';
+import { KeywordScoreCard } from '@/components/KeywordScoreCard';
 import type { TailorResponse } from '@/lib/types';
 
 function ReviewContent() {
@@ -61,7 +62,7 @@ function ReviewContent() {
     );
   }
 
-  const { diff_report, preview_html } = result;
+  const { diff_report, preview_html, keyword_score_before, keyword_score_after } = result;
   const totalChanges = diff_report.changes.length;
 
   const safePreviewHtml = useMemo(() => {
@@ -146,24 +147,15 @@ function ReviewContent() {
         </div>
       )}
 
-      {/* Keywords summary */}
-      {diff_report.keywords_added.length > 0 && (
-        <div className="card">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">
-            Keywords Added ({diff_report.keywords_added.length})
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {diff_report.keywords_added.map(kw => (
-              <span
-                key={kw}
-                className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"
-              >
-                + {kw}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Keyword coverage score */}
+      <div className="card">
+        <KeywordScoreCard
+          scoreBefore={keyword_score_before ?? 0}
+          scoreAfter={keyword_score_after ?? 0}
+          keywordsAdded={diff_report.keywords_added}
+          keywordsPreserved={diff_report.keywords_preserved}
+        />
+      </div>
     </div>
   );
 }

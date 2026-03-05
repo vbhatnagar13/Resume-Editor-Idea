@@ -1,7 +1,7 @@
 'use client';
 
 import type { DiffChange, DiffReport } from '@/lib/types';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 interface DiffViewerProps {
   diffReport: DiffReport;
@@ -78,11 +78,22 @@ function ChangeCard({ change, index }: { change: DiffChange; index: number }) {
 }
 
 export function DiffViewer({ diffReport }: DiffViewerProps) {
-  const { changes, keywords_added, keywords_preserved, fabrication_check, ats_check } =
-    diffReport;
+  const { changes, fabrication_check, ats_check } = diffReport;
 
   const fabricationOk = fabrication_check === 'passed';
   const atsOk = ats_check === 'ATS-friendly';
+
+  // Collect unique section names for the filter
+  const sectionNames = useMemo(
+    () => ['All', ...Array.from(new Set(changes.map(c => c.section)))],
+    [changes],
+  );
+  const [activeSection, setActiveSection] = useState('All');
+
+  const visibleChanges = useMemo(
+    () => (activeSection === 'All' ? changes : changes.filter(c => c.section === activeSection)),
+    [changes, activeSection],
+  );
 
   return (
     <div className="space-y-6">
@@ -126,29 +137,42 @@ export function DiffViewer({ diffReport }: DiffViewerProps) {
         </div>
       </div>
 
-      {/* Keywords */}
-      {keywords_added.length > 0 && (
-        <div>
-          <p className="text-sm font-semibold text-gray-700 mb-2">Keywords Added</p>
-          <div className="flex flex-wrap gap-2">
-            {keywords_added.map((kw, i) => (
-              <span
-                key={`${kw}-${i}`}
-                className="px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full"
-              >
-                + {kw}
-              </span>
-            ))}
-          </div>
+      {/* Section filter */}
+      {sectionNames.length > 2 && (
+        <div className="flex flex-wrap gap-2">
+          {sectionNames.map(name => (
+            <button
+              key={name}
+              type="button"
+              onClick={() => setActiveSection(name)}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                activeSection === name
+                  ? 'bg-brand-600 text-white'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {name}
+              {name !== 'All' && (
+                <span className="ml-1 opacity-70">
+                  ({changes.filter(c => c.section === name).length})
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       )}
 
       {/* Changes list */}
-      {changes.length > 0 ? (
+      {visibleChanges.length > 0 ? (
         <div>
-          <p className="text-sm font-semibold text-gray-700 mb-3">Changes</p>
+          <p className="text-sm font-semibold text-gray-700 mb-3">
+            Changes
+            {activeSection !== 'All' && (
+              <span className="ml-2 font-normal text-gray-500">in {activeSection}</span>
+            )}
+          </p>
           <div className="space-y-2">
-            {changes.map((change, i) => (
+            {visibleChanges.map((change, i) => (
               <ChangeCard key={change.bullet_id ?? change.entry_id ?? i} change={change} index={i} />
             ))}
           </div>
@@ -158,10 +182,15 @@ export function DiffViewer({ diffReport }: DiffViewerProps) {
           <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
-          <p className="font-medium">No changes needed</p>
-          <p className="text-sm mt-1">Your resume already aligns well with the job description.</p>
+          <p className="font-medium">No changes {activeSection !== 'All' ? `in ${activeSection}` : 'needed'}</p>
+          <p className="text-sm mt-1">
+            {activeSection !== 'All'
+              ? 'Try selecting "All" to see all changes.'
+              : 'Your resume already aligns well with the job description.'}
+          </p>
         </div>
       )}
     </div>
   );
 }
+

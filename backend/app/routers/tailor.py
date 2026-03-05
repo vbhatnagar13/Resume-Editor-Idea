@@ -10,7 +10,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.models.ir import ResumeIR
 from app.models.schemas import TailorRequest, TailorResponse
-from app.services.diff import generate_diff
+from app.services.diff import generate_diff, compute_keyword_coverage
 from app.services.editor import ResumeEditor
 from app.services.generator import generate_docx, generate_pdf
 from app.services.llm import LLMService, OpenAIClient, create_llm_service
@@ -125,9 +125,22 @@ async def tailor_resume(request: TailorRequest) -> TailorResponse:
     # Analyze JD
     jd_analysis = llm_service.analyze_job_description(request.job_description)
 
+    # Collect all JD keywords for coverage scoring
+    all_jd_keywords: list[str] = (
+        jd_analysis.get("keywords", [])
+        + jd_analysis.get("required_skills", [])
+        + jd_analysis.get("key_technologies", [])
+    )
+
+    # Compute keyword coverage before editing
+    score_before = compute_keyword_coverage(original_ir, all_jd_keywords)
+
     # Edit resume
     editor = ResumeEditor(llm_service=llm_service)
     revised_ir = editor.edit(original_ir, jd_analysis, request)
+
+    # Compute keyword coverage after editing
+    score_after = compute_keyword_coverage(revised_ir, all_jd_keywords)
 
     # Verify
     verification = llm_service.verify_resume(original_ir, revised_ir, jd_analysis)
@@ -160,4 +173,6 @@ async def tailor_resume(request: TailorRequest) -> TailorResponse:
         session_id=request.session_id,
         diff_report=diff_report,
         preview_html=preview_html,
+        keyword_score_before=score_before,
+        keyword_score_after=score_after,
     )

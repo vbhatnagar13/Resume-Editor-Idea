@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import uuid
 from pathlib import Path
+from typing import Optional
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
@@ -14,16 +15,21 @@ router = APIRouter()
 
 SESSION_DIR = Path(os.environ.get("SESSION_DIR", "/tmp/sessions"))
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
+MAX_JD_FILE_SIZE = 1 * 1024 * 1024  # 1 MB for JD text file
 
 
 @router.post("/upload", response_model=UploadResponse)
 async def upload_resume(
     file: UploadFile = File(...),
-    job_description: str = Form(...),
+    job_description: str = Form(default=""),
+    jd_file: Optional[UploadFile] = File(default=None),
 ) -> UploadResponse:
     """
-    Accept a resume (PDF or DOCX) and a job description text.
+    Accept a resume (PDF or DOCX) and a job description (text or .txt file).
     Store both in a session directory and return the session_id.
+
+    Either `job_description` (form text) or `jd_file` (.txt upload) must be provided.
+    If both are provided, `jd_file` takes precedence.
     """
     filename = file.filename or "resume"
     ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
@@ -40,12 +46,35 @@ async def upload_resume(
             detail="File exceeds the 10 MB limit.",
         )
 
+    # Resolve job description: file upload takes precedence over pasted text
+    resolved_jd = job_description
+    if jd_file is not None:
+        jd_filename = jd_file.filename or ""
+        if not jd_filename.lower().endswith(".txt"):
+            raise HTTPException(
+                status_code=400,
+                detail="Job description file must be a .txt file.",
+            )
+        jd_bytes = await jd_file.read()
+        if len(jd_bytes) > MAX_JD_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail="Job description file exceeds the 1 MB limit.",
+            )
+        resolved_jd = jd_bytes.decode("utf-8", errors="replace")
+
+    if not resolved_jd.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="A job description is required (paste text or upload a .txt file).",
+        )
+
     session_id = str(uuid.uuid4())
     session_path = SESSION_DIR / session_id
     session_path.mkdir(parents=True, exist_ok=True)
 
     (session_path / f"resume.{ext}").write_bytes(file_bytes)
-    (session_path / "job_description.txt").write_text(job_description, encoding="utf-8")
+    (session_path / "job_description.txt").write_text(resolved_jd, encoding="utf-8")
     (session_path / "original_filename.txt").write_text(filename, encoding="utf-8")
 
     return UploadResponse(

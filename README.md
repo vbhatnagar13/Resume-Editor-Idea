@@ -7,12 +7,14 @@ An AI-powered resume tailoring web application that rewrites your resume bullet 
 ## Features
 
 - 📄 **Upload** PDF or DOCX resumes (up to 10 MB)
+- 📋 **Job description** — paste text or upload a `.txt` file
 - 🤖 **AI Tailoring** with OpenAI GPT-4o-mini
 - 🎛️ **Three modes**: Conservative, Balanced, Aggressive
 - ✅ **Anti-fabrication guardrails** — never invents employers, degrees, or titles
-- 🔍 **Diff view** — see every change with original vs. revised text
+- 🔍 **Diff view** — see every change with original vs. revised text, filterable by section
+- 📊 **Keyword coverage score** — see before/after % of JD keywords covered
 - 📥 **Download** tailored resume as DOCX or PDF
-- 🔒 **Privacy-first** — files are session-only, never permanently stored
+- 🔒 **Privacy-first** — sessions auto-expire after 1 hour; files never permanently stored
 
 ## Architecture
 
@@ -119,7 +121,8 @@ Upload a resume file and job description.
 
 **Request**: `multipart/form-data`
 - `file`: PDF or DOCX file (max 10 MB)
-- `job_description`: Job description text
+- `job_description`: Job description text (OR use `jd_file`)
+- `jd_file` *(optional)*: Job description as a `.txt` file (max 1 MB, takes precedence over `job_description`)
 
 **Response**: `{ session_id, filename, message }`
 
@@ -137,7 +140,7 @@ Run the tailoring pipeline.
 }
 ```
 
-**Response**: `{ session_id, diff_report, preview_html }`
+**Response**: `{ session_id, diff_report, preview_html, keyword_score_before, keyword_score_after }`
 
 ### `GET /api/download/{session_id}/{format}`
 Download tailored resume. `format` is `docx` or `pdf`.
@@ -200,7 +203,7 @@ frontend/
 ### Privacy
 - Files are stored in `/tmp/sessions/{session_id}/` — ephemeral storage
 - No database, no user accounts
-- Sessions are cleaned up automatically by the OS
+- Sessions older than 1 hour are automatically deleted at API startup
 
 ### Mock-Friendly Architecture
 The `LLMService` accepts an `LLMClient` Protocol, enabling full mocking without any OpenAI key in tests.

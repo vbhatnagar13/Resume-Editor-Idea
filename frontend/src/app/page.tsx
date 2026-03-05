@@ -29,13 +29,14 @@ export default function HomePage() {
 
   const [file, setFile] = useState<File | null>(null);
   const [jobDescription, setJobDescription] = useState('');
+  const [jdFile, setJdFile] = useState<File | null>(null);
   const [settings, setSettings] = useState<TailorSettings>(DEFAULT_SETTINGS);
   const [step, setStep] = useState<Step>('idle');
   const [error, setError] = useState<string | null>(null);
 
   const canSubmit =
     file !== null &&
-    jobDescription.trim().length >= 50 &&
+    (jdFile !== null || jobDescription.trim().length >= 50) &&
     step === 'idle';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -46,7 +47,7 @@ export default function HomePage() {
 
     try {
       setStep('uploading');
-      const { session_id } = await uploadResume(file, jobDescription);
+      const { session_id } = await uploadResume(file, jobDescription, jdFile ?? undefined);
 
       setStep('tailoring');
       const response = await tailorResume({
@@ -92,6 +93,8 @@ export default function HomePage() {
           <JobDescriptionInput
             value={jobDescription}
             onChange={setJobDescription}
+            onJdFileSelect={setJdFile}
+            selectedJdFile={jdFile}
           />
         </div>
 
